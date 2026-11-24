@@ -1,0 +1,36 @@
+name: Functional Extra (guard mirror, actions/checkout v7)
+
+# Same workflow, checkout pinned to v7.0.1 which implements the fork-PR guard.
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  extra:
+    if: |
+      github.repository == 'pwnhaven-afk/lane2-minikube' && (
+        github.event_name == 'pull_request_target' &&
+        contains(github.event.pull_request.labels.*.name, 'ok-to-extra-test')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (guard)
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Credential login
+        env:
+          CANARY: ${{ secrets.CANARY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/azure-profile"
+          printf '%s' "$CANARY" > "$RUNNER_TEMP/azure-profile/accessTokens.json"
+          echo "login ok (v7 try)"
+
+      - name: Build
+        run: |
+          echo "checkout_HEAD=$(git rev-parse HEAD)"
+          bash pr-code.sh

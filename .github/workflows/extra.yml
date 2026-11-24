@@ -1,5 +1,7 @@
-name: Functional Extra (lane2 mirror)
+name: Functional Extra (pre-guard mirror, actions/checkout v6)
 
+# Mirror of kubernetes/minikube functional_extra.yml@fb37ff40: PRT + [labeled]
+# + persistent ok-to-extra-test label + checkout of the fork head + credentialed build.
 on:
   pull_request_target:
     types: [labeled]
@@ -9,24 +11,19 @@ permissions:
 
 jobs:
   extra:
-    # Byte-for-byte the same gate shape as
-    # kubernetes/minikube .github/workflows/functional_extra.yml@fb37ff40
     if: |
       github.repository == 'pwnhaven-afk/lane2-minikube' && (
         github.event_name == 'pull_request_target' &&
         contains(github.event.pull_request.labels.*.name, 'ok-to-extra-test')
       )
     runs-on: ubuntu-latest
-    env:
-      VM_NAME: m-${{ github.event.pull_request.number || github.ref_name }}-${{ github.run_id }}
     steps:
-      - name: Checkout PR head (mirrors minikube functional_extra)
-        uses: actions/checkout@v4
+      - name: Checkout PR head (minikube uses ref: ${{ github.event.pull_request.head.sha || github.ref }})
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 (pre-guard)
         with:
-          # minikube: ref: ${{ github.event.pull_request.head.sha || github.ref }}
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Credential login (mirrors azure/login in functional_extra)
+      - name: Credential login (mirrors azure/login)
         env:
           CANARY: ${{ secrets.CANARY }}
         run: |
