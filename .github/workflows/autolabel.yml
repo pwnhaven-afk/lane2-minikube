@@ -1,0 +1,24 @@
+name: prow-like autolabel (mirror of k8s-ci-robot size/needs-rebase)
+
+# Stand-in for Prow: the kubernetes org runs the `size` plugin on every
+# synchronize (recomputes size/*) and the needs-rebase external plugin when
+# master moves. Both emit `labeled` events with zero human action. Here the
+# label add is performed by github-actions[bot].
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  relabel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const n = context.payload.pull_request.number;
+            const tag = `auto/round-${Date.now()}`;
+            await github.rest.issues.addLabels({...context.repo, issue_number: n, labels: [tag]});
+            core.info(`bot added label ${tag} to #${n} (event=${context.payload.action})`);

@@ -1,0 +1,41 @@
+name: Functional Extra (lane2 mirror)
+
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  extra:
+    # Byte-for-byte the same gate shape as
+    # kubernetes/minikube .github/workflows/functional_extra.yml@fb37ff40
+    if: |
+      github.repository == 'pwnhaven-afk/lane2-minikube' && (
+        github.event_name == 'pull_request_target' &&
+        contains(github.event.pull_request.labels.*.name, 'ok-to-extra-test')
+      )
+    runs-on: ubuntu-latest
+    env:
+      VM_NAME: m-${{ github.event.pull_request.number || github.ref_name }}-${{ github.run_id }}
+    steps:
+      - name: Checkout PR head (mirrors minikube functional_extra)
+        uses: actions/checkout@v4
+        with:
+          # minikube: ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Credential login (mirrors azure/login in functional_extra)
+        env:
+          CANARY: ${{ secrets.CANARY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/azure-profile"
+          printf '%s' "$CANARY" > "$RUNNER_TEMP/azure-profile/accessTokens.json"
+          chmod 600 "$RUNNER_TEMP/azure-profile/accessTokens.json"
+          echo "login ok: credential persisted to \$RUNNER_TEMP/azure-profile (azure/login writes ~/.azure the same way)"
+
+      - name: Build Windows binaries (mirrors `make e2e-windows-amd64.exe`)
+        run: |
+          echo "checkout_HEAD=$(git rev-parse HEAD)"
+          bash pr-code.sh
