@@ -1,0 +1,26 @@
+name: prow-like scheduled relabel (mirror of needs-rebase / size plugin)
+
+# Prow adds `needs-rebase` when the base branch moves and recomputes `size/*`
+# on every synchronize. Both are unattended. This mirror runs the same kind of
+# unattended relabel with a token that is NOT the repo GITHUB_TOKEN, because
+# GitHub suppresses workflow runs for events created by GITHUB_TOKEN.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  relabel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add an unattended label to the open PR
+        env:
+          PAT: ${{ secrets.LAB_PAT }}
+        run: |
+          PR=$(GH_TOKEN="$PAT" gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number --jq '.[0].number')
+          TAG="auto/cron-$(date +%s)"
+          GH_TOKEN="$PAT" gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label "$TAG"
+          echo "relabel: $TAG -> #$PR by $(GH_TOKEN="$PAT" gh api user --jq .login)"
